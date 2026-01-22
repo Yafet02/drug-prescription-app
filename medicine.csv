@@ -1,0 +1,38 @@
+Patient,Medicine,Disease,Variety,Quantity(Packets),Date,Season
+John Doe,Artemisinin,Malaria,Vivax,10,4/15/2021,Wet
+Jane Smith,Paracetamol,Fever,Influenza,5,2/20/2021,Dry
+Michael Johnson,Aspirin,Pain,Migraine,8,3/10/2021,Wet
+Emily Brown,Artemisinin,Malaria,Falciparum,15,4/5/2021,Wet
+David Williams,Ibuprofen,Pain,Headache,7,5/12/2021,Wet
+Sarah Wilson,Artemisinin,Malaria,Vivax,12,5/8/2021,Wet
+James Anderson,Paracetamol,Fever,Common Cold,9,7/15/2021,Dry
+Emma Taylor,Artemisinin,Malaria,Falciparum,20,6/20/2021,Dry
+Olivia Miller,Aspirin,Pain,Back Pain,18,9/5/2021,Wet
+Ethan Martinez,Artemisinin,Malaria,Vivax,25,10/10/2021,Wet
+Ava Jackson,Paracetamol,Fever,Influenza,6,11/15/2021,Wet
+Liam Brown,Artemisinin,Malaria,Falciparum,11,11/20/2021,Wet
+Sophia Taylor,Ibuprofen,Pain,Headache,14,1/25/2022,Dry
+Mason Johnson,Artemisinin,Malaria,Vivax,8,3/10/2022,Wet
+Harper Wilson,Paracetamol,Fever,Common Cold,10,3/15/2022,Wet
+Evelyn Anderson,Aspirin,Pain,Migraine,9,4/20/2022,Wet
+Logan Smith,Artemisinin,Malaria,Falciparum,16,5/25/2022,Wet
+Mia Williams,Paracetamol,Fever,Influenza,7,6/30/2022,Dry
+Elijah Brown,Aspirin,Pain,Back Pain,22,7/5/2022,Dry
+Charlotte Johnson,Artemisinin,Malaria,Vivax,18,6/10/2022,Dry
+Oliver Taylor,Paracetamol,Fever,Common Cold,13,9/15/2022,Wet
+Amelia Miller,Ibuprofen,Pain,Headache,11,10/20/2022,Wet
+Benjamin Martinez,Artemisinin,Malaria,Falciparum,27,11/25/2022,Wet
+Emma Jackson,Paracetamol,Fever,Influenza,8,12/30/2022,Dry
+Noah Brown,Aspirin,Pain,Migraine,15,1/5/2023,Dry
+Mia Johnson,Artemisinin,Malaria,Vivax,9,3/10/2023,Wet
+William Wilson,Paracetamol,Fever,Common Cold,11,3/15/2023,Wet
+Sophia Anderson,Ibuprofen,Pain,Headache,6,4/20/2023,Wet
+James Smith,Artemisinin,Malaria,Falciparum,18,5/25/2023,Wet
+Olivia Williams,Paracetamol,Fever,Influenza,7,6/30/2023,Dry
+Elijah Brown,Aspirin,Pain,Back Pain,23,7/5/2023,Dry
+Ava Johnson,Artemisinin,Malaria,Vivax,17,8/10/2023,Dry
+Logan Taylor,Paracetamol,Fever,Common Cold,12,9/15/2023,Wet
+Mia Miller,Ibuprofen,Pain,Headache,14,10/20/2023,Wet
+Benjamin Martinez,Artemisinin,Malaria,Falciparum,29,11/25/2023,Wet
+Emma Jackson,Paracetamol,Fever,Influenza,7,12/30/2023,Dry
+Noah Brown,Aspirin,Pain,Migraine,16,1/5/2024,Dry
