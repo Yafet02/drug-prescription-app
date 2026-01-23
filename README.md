@@ -28,8 +28,10 @@ A Streamlit web application for analyzing drug prescriptions and disease dataset
    streamlit run database.py
    ```
    ctrl + c to end after operation is done
+
    - User = "Admin"
    - password = "pass123"
+   
 4. Run the app:
    ```bash
    streamlit run app.py
