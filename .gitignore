@@ -1,0 +1,48 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+
+# Streamlit
+.streamlit/
+.streamlit/config.toml
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+users.db*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Data files
+*.csv
+!Historical_Data_7_Aug_2024.csv
+# model files and assets for deployment
+!Model/*.pkl
+!Model/
+!assets/
+
+# Folders to exclude
+App/
+OneDrive/
+.ipynb_checkpoints/
+DEVELOPER_GUIDE.md
+.devcontainer/
