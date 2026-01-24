@@ -1,12 +1,4 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-.venv
+
 
 # Streamlit
 .streamlit/
@@ -16,6 +8,7 @@ venv/
 *.db
 *.db-shm
 *.db-wal
+users.db*
 
 # IDE
 .vscode/
