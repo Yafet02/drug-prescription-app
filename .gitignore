@@ -16,7 +16,6 @@ venv/
 *.db
 *.db-shm
 *.db-wal
-users.db*
 
 # IDE
 .vscode/
