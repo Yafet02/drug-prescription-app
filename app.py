@@ -270,7 +270,7 @@ def main():
                 add_user_page(conn)
 
         elif section_selection == "Admin Panel":
-            st.write(".")
+            st.write("Admin-specific functionality goes here.")
 
         # Logout button
         if st.sidebar.button("🚪 Log Out", key="logout_button"):
