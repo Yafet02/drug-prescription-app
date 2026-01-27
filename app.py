@@ -1,4 +1,3 @@
-
 import streamlit as st
 st.set_page_config(page_title="Drug Prescription App", page_icon="💊", layout="wide")
 import sqlite3
@@ -9,7 +8,7 @@ from passlib.hash import bcrypt
 from predict_page import show_predict_page
 from explore_page import show_explore_page
 from records import records
-from add_medicine_page import show_add_medicine_page
+from add_medicine_page import show_add_medicine_page, apply_dark_mode
 from add_user_page import add_user_page
 
 # Constants
@@ -73,18 +72,23 @@ def authenticate_user(username, password, conn):
         return False
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT username, password FROM users WHERE username=?", (username,))
+        cursor.execute('''SELECT u.username, u.password, r.role_name
+                          FROM users u
+                          JOIN roles r ON u.role_id = r.id
+                          WHERE u.username=?''', (username,))
         user = cursor.fetchone()
         if user:
             hashed_password = user[1]
+            role = user[2]
             if bcrypt.verify(password, hashed_password):
                 st.session_state["authenticated"] = True
                 st.session_state["user"] = username
+                st.session_state["role"] = role
                 st.session_state["login_error"] = ""
                 return True
     except sqlite3.Error as e:
         st.error(f"Database error: {e}")
-    
+
     st.session_state["authenticated"] = False
     st.session_state["login_error"] = "Invalid username or password."
     return False
@@ -97,6 +101,33 @@ def logout():
     st.session_state.pop("records_page", None)
     st.session_state.pop("section", None)
 
+def create_roles_table(conn):
+    """Create the roles table if it doesn't exist."""
+    if conn is None:
+        return
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS roles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            role_name TEXT NOT NULL UNIQUE
+        )''')
+        conn.commit()
+    except sqlite3.Error as e:
+        st.error(f"Error creating roles table: {e}")
+
+def seed_roles(conn):
+    """Seed the roles table with default roles."""
+    if conn is None:
+        return
+    try:
+        cursor = conn.cursor()
+        roles = ["Admin", "Healthcare Staff"]
+        for role in roles:
+            cursor.execute("INSERT OR IGNORE INTO roles (role_name) VALUES (?)", (role,))
+        conn.commit()
+    except sqlite3.Error as e:
+        st.error(f"Error seeding roles: {e}")
+
 def create_users_table(conn):
     """Create the users table if it doesn't exist."""
     if conn is None:
@@ -106,7 +137,9 @@ def create_users_table(conn):
         cursor.execute('''CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL
+            password TEXT NOT NULL,
+            role_id INTEGER NOT NULL,
+            FOREIGN KEY (role_id) REFERENCES roles (id)
         )''')
         conn.commit()
     except sqlite3.Error as e:
@@ -122,7 +155,7 @@ def seed_default_user(conn):
         if cursor.fetchone() is None:
             from passlib.hash import bcrypt
             hashed_password = bcrypt.hash("pass123")
-            cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", ("Tedros", hashed_password))
+            cursor.execute("INSERT INTO users (username, password, role_id) VALUES (?, ?, ?)", ("Tedros", hashed_password, 1))
             conn.commit()
     except sqlite3.Error as e:
         st.error(f"Error seeding default user: {e}")
@@ -139,8 +172,10 @@ def main():
     conn = create_connection(DB_PATH_USERS)
     medicine_conn = create_connection(DB_PATH_MEDICINE)
 
-    # Ensure users table exists and seed default user
+    # Ensure roles and users tables exist and seed default data
     if conn is not None:
+        create_roles_table(conn)
+        seed_roles(conn)
         create_users_table(conn)
         seed_default_user(conn)
 
@@ -148,6 +183,7 @@ def main():
     if "authenticated" not in st.session_state:
         st.session_state["authenticated"] = False
         st.session_state["user"] = ""
+        st.session_state["role"] = ""
         st.session_state["login_error"] = ""
         st.session_state["section"] = "General"
         st.session_state["page"] = "Predict"
@@ -160,7 +196,7 @@ def main():
                 st.image(IMAGE_PATH, use_container_width=True)
         except Exception as e:
             st.warning(f"Could not load image: {e}")
-        
+
         st.sidebar.title("🔐 Login")
 
         with st.sidebar.form(key='login_form'):
@@ -176,7 +212,7 @@ def main():
 
     else:
         # Main application
-        st.sidebar.title(f"👤 Welcome, {st.session_state['user']}!")
+        st.sidebar.title(f"👤 Welcome, {st.session_state['user']} ({st.session_state['role']})!")
 
         if medicine_conn is not None:
             create_medicines_table(medicine_conn)
@@ -184,12 +220,20 @@ def main():
             st.error("Failed to connect to the Medicine database.")
             return
 
-        # Sidebar navigation
-        section_selection = st.sidebar.selectbox(
-            "📂 Select Section",
-            ["General", "Records"],
-            key="section_selectbox"
-        )
+        # Sidebar navigation based on role
+        if st.session_state["role"] == "Admin":
+            section_selection = st.sidebar.selectbox(
+                "📂 Select Section",
+                ["General", "Records", "Admin Panel"],
+                key="section_selectbox"
+            )
+        else:
+            section_selection = st.sidebar.selectbox(
+                "📂 Select Section",
+                ["General", "Records"],
+                key="section_selectbox"
+            )
+
         st.session_state["section"] = section_selection
 
         if section_selection == "General":
@@ -225,10 +269,14 @@ def main():
             elif st.session_state["records_page"] == "Add Users":
                 add_user_page(conn)
 
+        elif section_selection == "Admin Panel":
+            st.write(".")
+
         # Logout button
         if st.sidebar.button("🚪 Log Out", key="logout_button"):
             logout()
             st.rerun()
 
 if __name__ == '__main__':
+    apply_dark_mode()  # Apply dark mode styles globally
     main()

@@ -1,8 +1,37 @@
 import streamlit as st
 from config import MEDICINE_DISEASE_MAP
 
+def apply_dark_mode():
+    """Apply dark mode styles."""
+    st.markdown(
+        """
+        <style>
+        .stApp {
+            background-color: #0E1117;
+            color: #FAFAFA;
+        }
+        .stTextInput>div>input, .stNumberInput>div>input, .stDateInput>div>input, .stSelectbox>div>div {
+            background-color: #262730 !important;
+            color: #FAFAFA !important;
+            border-radius: 8px;
+            border: 1px solid #00BFFF;
+        }
+        .stButton>button {
+            background-color: #00BFFF !important;
+            color: #FAFAFA !important;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
 def about_page():
     """About and help page."""
+    apply_dark_mode()  # Apply dark mode styles
+
     st.title("❓ About & Help")
     
     col1, col2 = st.columns(2)

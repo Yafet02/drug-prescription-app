@@ -1,29 +1,39 @@
 import streamlit as st
 import sqlite3
 
-def show_add_medicine_page(medicine_conn):
+def apply_dark_mode():
+    """Apply dark mode styles."""
+    st.markdown(
+        """
+        <style>
+        .stApp {
+            background-color: #0E1117;
+            color: #FAFAFA;
+        }
+        .stTextInput>div>input, .stNumberInput>div>input, .stDateInput>div>input, .stSelectbox>div>div {
+            background-color: #262730 !important;
+            color: #FAFAFA !important;
+            border-radius: 8px;
+            border: 1px solid #00BFFF;
+        }
+        .stButton>button {
+            background-color: #00BFFF !important;
+            color: #FAFAFA !important;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
-    st.markdown("""
-    <style>
-    .stApp {
-        background-color: #0E1117;
-        color: #FAFAFA;
-    }
-    .stTextInput>div>input, .stNumberInput>div>input, .stDateInput>div>input, .stSelectbox>div>div {
-        background-color: #262730 !important;
-        color: #FAFAFA !important;
-        border-radius: 8px;
-        border: 1px solid #00BFFF;
-    }
-    .stButton>button {
-        background-color: #00BFFF !important;
-        color: #FAFAFA !important;
-        border-radius: 8px;
-        border: none;
-        font-weight: bold;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+def show_add_medicine_page(medicine_conn):
+    if st.session_state.get("role") not in ["Admin", "Healthcare Staff"]:
+        st.error("You do not have permission to access this page.")
+        return
+
+    apply_dark_mode()
 
     st.title("Add New Medicine")
     with st.form(key='add_medicine_form'):
@@ -52,3 +62,4 @@ def show_add_medicine_page(medicine_conn):
                     st.error(f"Failed to add medicine: {e}")
             else:
                 st.error("Please fill out all fields.")
+    st.write("Ensure validation for duplicate entries here.")

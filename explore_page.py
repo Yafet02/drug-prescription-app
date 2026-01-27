@@ -2,7 +2,10 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 import warnings
+from add_medicine_page import apply_dark_mode
+
 warnings.filterwarnings("ignore")
+apply_dark_mode()  # Apply dark mode styles
 
 @st.cache_data
 def load_data():
@@ -18,7 +21,12 @@ def load_data():
 train_data = load_data()
 
 
+# Added role-based access for analytics
 def show_explore_page():
+    if st.session_state.get("role") not in ["Admin", "Healthcare Staff"]:
+        st.error("You do not have permission to access this page.")
+        return
+
     st.title('Medicine Consumption Analysis')
 
     # Data filters
@@ -66,7 +74,6 @@ def show_explore_page():
             tooltip=['Month', 'Medicine', 'Quantity(Packets)', 'Season']
         ).configure(background='#045F5F').interactive()
         st.altair_chart(scatter_plot, use_container_width=True)
-
 
 def main():
     st.title('Medicine Sales Data Analysis')

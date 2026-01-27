@@ -1,19 +1,25 @@
 import streamlit as st
 import pandas as pd
+from add_medicine_page import apply_dark_mode
+
+apply_dark_mode()  # Apply dark mode styles
 
 # Function to handle actions
 def handle_action(action, row_id, conn):
-   ''' cursor = conn.cursor()
     if action == 'Edit':
         st.session_state['page'] = 'Edit Medicine'
         st.session_state['edit_id'] = row_id
         st.rerun()  # This forces the app to rerun and navigate to the edit page
     elif action == 'Delete':
-        cursor.execute("DELETE FROM Medicines WHERE rowid=?", (row_id,))
-        conn.commit()
-        st.success(f"Deleted successfully! (ID: {row_id})")
-        st.session_state['page'] = 'Records'
-        st.rerun()  # Rerun the app to refresh the records page'''
+        if st.session_state.get("role") == "Admin":
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM Medicines WHERE rowid=?", (row_id,))
+            conn.commit()
+            st.success(f"Deleted successfully! (ID: {row_id})")
+            st.session_state['page'] = 'Records'
+            st.rerun()  # Rerun the app to refresh the records page
+        else:
+            st.error("You do not have permission to delete records.")
 
 # Function for the records page
 def records(conn):

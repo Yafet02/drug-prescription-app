@@ -4,6 +4,10 @@ import pickle
 import streamlit as st
 import altair as alt
 import joblib
+import io
+from add_medicine_page import apply_dark_mode
+
+apply_dark_mode()  # Apply dark mode styles
 
 # Load the model and feature columns
 def load_model(model_path):
@@ -58,6 +62,10 @@ def preprocess_input(Year, Month, Medicines, Season, feature_columns, df):
 
 
 def show_predict_page(model_path='Model/best_rf_model.pkl', feature_columns_path='Model/feature_columns.pkl', dataset_path="Historical_Data_7_Aug_2024.csv"):
+    if st.session_state.get("role") not in ["Admin", "Healthcare Staff"]:
+        st.error("You do not have permission to access this page.")
+        return
+
     st.title('Medicine Quantity Prediction')
     st.write('Please fill in the following details to predict the quantity of medicine needed.')
 
@@ -68,7 +76,7 @@ def show_predict_page(model_path='Model/best_rf_model.pkl', feature_columns_path
 
     unique_medicines = df['Medicine'].unique()
     unique_diseases = df['Disease'].unique()
-    
+
     feature_columns = load_feature_columns(feature_columns_path)
     if feature_columns is None:
         return
@@ -76,18 +84,18 @@ def show_predict_page(model_path='Model/best_rf_model.pkl', feature_columns_path
     model = load_model(model_path)
     if model is None:
         return
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         Year = st.number_input('Year', min_value=2024)
-    
+
     with col2:
         Month = st.selectbox('Month', options=[
             "January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"
         ])
-    
+
     Season = st.radio('Season', ('Wet', 'Dry'))
     Medicines = st.multiselect("Select Medicines", unique_medicines)
 
@@ -99,10 +107,10 @@ def show_predict_page(model_path='Model/best_rf_model.pkl', feature_columns_path
         table_data = []
         for medicine in Medicines:
             diseases = df[df['Medicine'] == medicine]['Disease'].unique()
-            
+
             for disease in diseases:
                 input_data = preprocess_input(Year, Month, [medicine], Season, feature_columns, df)
-                
+
                 if input_data is None:
                     return
 
@@ -114,25 +122,36 @@ def show_predict_page(model_path='Model/best_rf_model.pkl', feature_columns_path
                     "Disease": disease,
                     "Predicted Quantity": int(round(predictions[0]))
                 })
-    
+
         df_result = pd.DataFrame(table_data)
-        # Group by Month, Medicine, and Disease to aggregate predictions
-        df_grouped = df_result.groupby(['Month', 'Medicine', 'Disease']).agg({
-            'Predicted Quantity': 'sum'  # Sum quantities for each month, medicine, and disease
-        }).reset_index()
-        
-        # Define table styles
-        table_styles = [
-            {'selector': 'table', 'props': [('border-collapse', 'collapse'), ('border', '3px solid black')]},
-            {'selector': 'th', 'props': [('border', '2px solid green')]},
-            {'selector': 'td', 'props': [('border', '2px solid green')]}
-        ]
         st.write("Predicted Quantities:")
-        for month, group in df_result.groupby('Month'):
-            st.markdown(f"### {month}")
-            st.table(group.drop(columns='Month').style.set_table_styles(table_styles))
-        
-        
+        st.dataframe(df_result)
+
+        # Export predictions as CSV
+        csv = io.StringIO()
+        df_result.to_csv(csv, index=False)
+        st.download_button(
+            label="Download Predictions as CSV",
+            data=csv.getvalue(),
+            file_name="predictions.csv",
+            mime="text/csv"
+        )
+
+        # Seasonal trends visualization
+        st.subheader('Seasonal Trends for Selected Medicines')
+        seasonal_data = df[df['Medicine'].isin(Medicines)]
+        seasonal_chart = alt.Chart(seasonal_data).mark_line().encode(
+            x='YearMonth:T',
+            y='Quantity(Packets):Q',
+            color='Medicine:N',
+            tooltip=['YearMonth', 'Medicine', 'Quantity(Packets)']
+        ).properties(
+            width=800,
+            height=400
+        ).interactive()
+
+        st.altair_chart(seasonal_chart)
+
         # Prepare data for future months
         future_months = np.arange(1, 13)
         predicted_data = pd.DataFrame({'Month': future_months})
@@ -145,17 +164,17 @@ def show_predict_page(model_path='Model/best_rf_model.pkl', feature_columns_path
                                   7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November',
                                   12: 'December'}[month]
                     input_data = preprocess_input(Year, month_name, [medicine], Season, feature_columns, df)
-                    
+
                     if input_data is None:
                         return
-                    
+
                     preds = model.predict(input_data)
                     predicted_values.append(int(round(preds[0])))
-                
+
                 predicted_data[f'{medicine}_{disease}'] = predicted_values
-        
+
         predicted_data_long = predicted_data.melt(id_vars=['Month'], var_name='Medicine_Disease', value_name='Predicted Quantity')
-        
+
         st.subheader('Predicted Trend for Selected Medicines in Future Months')
         line_chart = alt.Chart(predicted_data_long).mark_line().encode(
             x='Month:Q',
@@ -165,8 +184,8 @@ def show_predict_page(model_path='Model/best_rf_model.pkl', feature_columns_path
         ).properties(
             width=800,
             height=400
-        ).configure(background='#045F5F').interactive()
-        
+        ).interactive()
+
         st.altair_chart(line_chart)
 
 if __name__ == '__main__':
