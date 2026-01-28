@@ -270,7 +270,7 @@ def main():
                 add_user_page(conn)
 
         elif section_selection == "Admin Panel":
-            st.write("Admin-specific functionality goes here.")
+            st.write("For future admin panel functionality.")
 
         # Logout button
         if st.sidebar.button("🚪 Log Out", key="logout_button"):
@@ -278,5 +278,4 @@ def main():
             st.rerun()
 
 if __name__ == '__main__':
-    apply_dark_mode()  # Apply dark mode styles globally
     main()
