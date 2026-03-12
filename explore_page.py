@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 import warnings
-from add_medicine_page import apply_dark_mode
+from utils import apply_dark_mode
+from auth import has_permission
 
 warnings.filterwarnings("ignore")
 apply_dark_mode()  # Apply dark mode styles
@@ -74,10 +75,3 @@ def show_explore_page():
             tooltip=['Month', 'Medicine', 'Quantity(Packets)', 'Season']
         ).configure(background='#045F5F').interactive()
         st.altair_chart(scatter_plot, use_container_width=True)
-
-def main():
-    st.title('Medicine Sales Data Analysis')
-    show_explore_page()
-
-if __name__ == '__main__':
-    main()

@@ -1,103 +1,134 @@
 import pandas as pd
 import numpy as np
-import pickle
 import streamlit as st
 import altair as alt
 import joblib
 import io
-from add_medicine_page import apply_dark_mode
+from utils import apply_dark_mode
+from config import MODEL_PATH, FEATURES_PATH
+from auth import has_permission
 
-apply_dark_mode()  # Apply dark mode styles
+apply_dark_mode()
 
-# Load the model and feature columns
-def load_model(model_path):
+# ---------- Loading helpers – cached ----------
+@st.cache_resource
+def load_model() -> object | None:
     try:
-        with open(model_path, "rb") as file:
-            return joblib.load(file)
+        return joblib.load(MODEL_PATH)
     except FileNotFoundError:
-        st.error(f"Model file not found at: {model_path}")
+        st.error(f"Model file not found at: {MODEL_PATH}")
         return None
 
-def load_feature_columns(feature_columns_path):
+
+@st.cache_resource
+def load_feature_columns() -> list | None:
     try:
-        with open(feature_columns_path, "rb") as file:
-            return joblib.load(file)
+        return joblib.load(FEATURES_PATH)
     except FileNotFoundError:
-        st.error(f"Feature columns file not found at: {feature_columns_path}")
+        st.error(f"Feature columns file not found at: {FEATURES_PATH}")
         return None
 
-# Preprocess input for prediction
-def preprocess_input(Year, Month, Medicines, Season, feature_columns, df):
+
+# ---------- Pre‑processing ----------
+def preprocess_input(
+    Year: int,
+    Month: str,
+    Medicines: list[str],
+    Season: str,
+    feature_columns: list[str],
+    df: pd.DataFrame,
+) -> np.ndarray:
     month_map = {
-        "January": 1, "February": 2, "March": 3, "April": 4,
-        "May": 5, "June": 6, "July": 7, "August": 8,
-        "September": 9, "October": 10, "November": 11, "December": 12
+        "January": 1,
+        "February": 2,
+        "March": 3,
+        "April": 4,
+        "May": 5,
+        "June": 6,
+        "July": 7,
+        "August": 8,
+        "September": 9,
+        "October": 10,
+        "November": 11,
+        "December": 12,
     }
-    month_numeric = month_map.get(Month, 0)  # Default to 0 if month is invalid
+    month_num = month_map.get(Month, 0)
 
-    input_data = []
+    input_rows = []
     for medicine in Medicines:
-        # Get the most recent quantity data for the selected medicine
-        medicine_df = df[df['Medicine'] == medicine]
-        prev_quantity = medicine_df['Quantity(Packets)'].shift(1).fillna(0).values[-1]
-        
-        # Prepare the input features in the correct order
-        features = [
-            Year,
-            month_numeric,
-            prev_quantity
-        ]
-        
-        # One-hot encode the Season input
-        season_one_hot = [0] * (len(feature_columns) - 3)  # Adjust for number of one-hot encoded season columns
-        
-        if f'Season_{Season}' in feature_columns:
-            season_one_hot[feature_columns.index(f'Season_{Season}') - 3] = 1
-        
+        # Most recent quantity
+        med_df = df[df["Medicine"] == medicine]
+        prev_qty = med_df["Quantity(Packets)"].shift(1).fillna(0).iloc[-1]
+
+        # Base features
+        features = [Year, month_num, prev_qty]
+
+        # One‑hot season
+        season_cols = [c for c in feature_columns if c.startswith("Season_")]
+        season_one_hot = [0] * len(season_cols)
+        if f"Season_{Season}" in season_cols:
+            season_one_hot[season_cols.index(f"Season_{Season}")] = 1
         features.extend(season_one_hot)
-        
-        input_data.append(features)
-    
-    return np.array(input_data)
+
+        # One‑hot medicine (if present)
+        med_cols = [c for c in feature_columns if c.startswith("Medicine_")]
+        med_one_hot = [0] * len(med_cols)
+        if f"Medicine_{medicine}" in med_cols:
+            med_one_hot[med_cols.index(f"Medicine_{medicine}")] = 1
+        features.extend(med_one_hot)
+
+        input_rows.append(features)
+
+    return np.array(input_rows)
 
 
-def show_predict_page(model_path='Model/best_rf_model.pkl', feature_columns_path='Model/feature_columns.pkl', dataset_path="Historical_Data_7_Aug_2024.csv"):
-    if st.session_state.get("role") not in ["Admin", "Healthcare Staff"]:
+# ---------- Page ----------
+def show_predict_page() -> None:
+    if not has_permission("Predict"):
         st.error("You do not have permission to access this page.")
         return
 
-    st.title('Medicine Quantity Prediction')
-    st.write('Please fill in the following details to predict the quantity of medicine needed.')
+    st.title("Medicine Quantity Prediction")
+    st.write(
+        "Please fill in the following details to predict the quantity of medicine needed."
+    )
 
     # Load the dataset and feature columns
-    df = pd.read_csv(dataset_path)
-    df['Date'] = pd.to_datetime(df['Date'], format='%m/%d/%Y')
-    df['YearMonth'] = df['Date'].dt.to_period('M')
+    df = pd.read_csv("Historical_Data_7_Aug_2024.csv")  # CSV, not DB
+    df["Date"] = pd.to_datetime(df["Date"], format="%m/%d/%Y")
+    df["YearMonth"] = df["Date"].dt.to_period("M")
 
-    unique_medicines = df['Medicine'].unique()
-    unique_diseases = df['Disease'].unique()
-
-    feature_columns = load_feature_columns(feature_columns_path)
+    feature_columns = load_feature_columns()
     if feature_columns is None:
         return
-
-    model = load_model(model_path)
+    model = load_model()
     if model is None:
         return
 
     col1, col2 = st.columns(2)
-
     with col1:
-        Year = st.number_input('Year', min_value=2024)
-
+        Year = st.number_input("Year", min_value=2024)
     with col2:
-        Month = st.selectbox('Month', options=[
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
-        ])
+        Month = st.selectbox(
+            "Month",
+            [
+                "January",
+                "February",
+                "March",
+                "April",
+                "May",
+                "June",
+                "July",
+                "August",
+                "September",
+                "October",
+                "November",
+                "December",
+            ],
+        )
 
-    Season = st.radio('Season', ('Wet', 'Dry'))
-    Medicines = st.multiselect("Select Medicines", unique_medicines)
+    Season = st.radio("Season", ("Wet", "Dry"))
+    Medicines = st.multiselect("Select Medicines", df["Medicine"].unique())
 
     if st.button("Submit"):
         if not Medicines:
@@ -106,87 +137,75 @@ def show_predict_page(model_path='Model/best_rf_model.pkl', feature_columns_path
 
         table_data = []
         for medicine in Medicines:
-            diseases = df[df['Medicine'] == medicine]['Disease'].unique()
-
+            diseases = df[df["Medicine"] == medicine]["Disease"].unique()
             for disease in diseases:
-                input_data = preprocess_input(Year, Month, [medicine], Season, feature_columns, df)
+                inp = preprocess_input(Year, Month, [medicine], Season, feature_columns, df)
+                pred = model.predict(inp)[0]
+                table_data.append(
+                    {
+                        "Month": Month,
+                        "Medicine": medicine,
+                        "Disease": disease,
+                        "Predicted Quantity": int(round(pred)),
+                    }
+                )
 
-                if input_data is None:
-                    return
-
-                # Predict quantity for this medicine-disease combination
-                predictions = model.predict(input_data)
-                table_data.append({
-                    "Month": Month,
-                    "Medicine": medicine,
-                    "Disease": disease,
-                    "Predicted Quantity": int(round(predictions[0]))
-                })
-
-        df_result = pd.DataFrame(table_data)
+        result_df = pd.DataFrame(table_data)
         st.write("Predicted Quantities:")
-        st.dataframe(df_result)
+        st.dataframe(result_df)
 
         # Export predictions as CSV
         csv = io.StringIO()
-        df_result.to_csv(csv, index=False)
+        result_df.to_csv(csv, index=False)
         st.download_button(
             label="Download Predictions as CSV",
             data=csv.getvalue(),
             file_name="predictions.csv",
-            mime="text/csv"
+            mime="text/csv",
         )
 
-        # Seasonal trends visualization
-        st.subheader('Seasonal Trends for Selected Medicines')
-        seasonal_data = df[df['Medicine'].isin(Medicines)]
+        # Seasonal trends
+        st.subheader("Seasonal Trends for Selected Medicines")
+        seasonal_data = df[df["Medicine"].isin(Medicines)]
         seasonal_chart = alt.Chart(seasonal_data).mark_line().encode(
-            x='YearMonth:T',
-            y='Quantity(Packets):Q',
-            color='Medicine:N',
-            tooltip=['YearMonth', 'Medicine', 'Quantity(Packets)']
-        ).properties(
-            width=800,
-            height=400
-        ).interactive()
+            x="YearMonth:T",
+            y="Quantity(Packets):Q",
+            color="Medicine:N",
+            tooltip=["YearMonth", "Medicine", "Quantity(Packets)"],
+        ).properties(width=800, height=400)
+        st.altair_chart(seasonal_chart, use_container_width=True)
 
-        st.altair_chart(seasonal_chart)
-
-        # Prepare data for future months
+        # Future month predictions
         future_months = np.arange(1, 13)
-        predicted_data = pd.DataFrame({'Month': future_months})
-
+        future_df = pd.DataFrame({"Month": future_months})
         for medicine in Medicines:
-            for disease in df[df['Medicine'] == medicine]['Disease'].unique():
-                predicted_values = []
-                for month in future_months:
-                    month_name = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
-                                  7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November',
-                                  12: 'December'}[month]
-                    input_data = preprocess_input(Year, month_name, [medicine], Season, feature_columns, df)
+            preds = []
+            for month in future_months:
+                month_name = {
+                    1: "January",
+                    2: "February",
+                    3: "March",
+                    4: "April",
+                    5: "May",
+                    6: "June",
+                    7: "July",
+                    8: "August",
+                    9: "September",
+                    10: "October",
+                    11: "November",
+                    12: "December",
+                }[month]
+                inp = preprocess_input(Year, month_name, [medicine], Season, feature_columns, df)
+                preds.append(int(round(model.predict(inp)[0])))
+            future_df[f"{medicine}_Predicted"] = preds
 
-                    if input_data is None:
-                        return
+        future_long = future_df.melt(id_vars=["Month"], var_name="Medicine_Disease", value_name="Predicted Quantity")
 
-                    preds = model.predict(input_data)
-                    predicted_values.append(int(round(preds[0])))
-
-                predicted_data[f'{medicine}_{disease}'] = predicted_values
-
-        predicted_data_long = predicted_data.melt(id_vars=['Month'], var_name='Medicine_Disease', value_name='Predicted Quantity')
-
-        st.subheader('Predicted Trend for Selected Medicines in Future Months')
-        line_chart = alt.Chart(predicted_data_long).mark_line().encode(
-            x='Month:Q',
-            y='Predicted Quantity:Q',
-            color='Medicine_Disease:N',
-            tooltip=['Month', 'Medicine_Disease', 'Predicted Quantity']
-        ).properties(
-            width=800,
-            height=400
-        ).interactive()
-
-        st.altair_chart(line_chart)
-
-if __name__ == '__main__':
-    show_predict_page()
+        st.subheader("Predicted Trend for Selected Medicines in Future Months")
+        line_chart = alt.Chart(future_long).mark_line().encode(
+            x="Month:Q",
+            y="Predicted Quantity:Q",
+            color="Medicine_Disease:N",
+            tooltip=["Month", "Medicine_Disease", "Predicted Quantity"],
+        ).properties(width=800, height=400)
+        st.altair_chart(line_chart, use_container_width=True)

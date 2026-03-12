@@ -1,39 +1,24 @@
+# config.py
 from pathlib import Path
 
-# Project directory
-PROJECT_DIR = Path(__file__).parent.absolute()
+# Resolve to an absolute path to avoid any ambiguity
+BASE_DIR = Path(__file__).parent.resolve()
 
-# Model path
-MODEL_PATH = PROJECT_DIR / "model_saved"
+# Database paths
+DB_PATH_USERS = BASE_DIR / "users.db"
+DB_PATH_MEDICINE = BASE_DIR / "Historical_Data_Medicine.db"
 
-# Data files
-DATA_DIR = PROJECT_DIR
+# Model & feature files
+MODEL_PATH = BASE_DIR / "Model/best_rf_model.pkl"
+FEATURES_PATH = BASE_DIR / "Model/feature_columns.pkl"
 
-# CSV files
-HISTORICAL_DATA_PATH = DATA_DIR / "Historical_Data_7_Aug_2024.csv"
-MEDICINE_CSV_PATH = DATA_DIR / "medicine.csv"
-
-# Image path
-_LOCAL_IMAGE = PROJECT_DIR / "login_image.png"
-IMAGE_PATH = _LOCAL_IMAGE if _LOCAL_IMAGE.exists() else None
-
-# Medicine disease mapping
-MEDICINE_DISEASE_MAP = {
-    "Aspirin": "Fever",
-    "Ibuprofen": "Headache",
-    "Paracetamol": "Pain",
-    "Amoxicillin": "Infection",
-    "Cetirizine": "Allergy",
-    "Loratadine": "Allergy",
-    "Atorvastatin": "Cholesterol",
-    "Metformin": "Diabetes",
-    "Lisinopril": "Hypertension",
-    "Omeprazole": "Acid Reflux",
-    "Sertraline": "Depression"
+# Default session state values
+SESSION_KEYS = {
+    "authenticated": False,
+    "user": "",
+    "role": "",
+    "login_error": "",
+    "section": "General",
+    "page": "Predict",
+    "records_page": "View Records",
 }
-
-def verify_files():
-    """Verify all required files exist."""
-    print(f"Project Directory: {PROJECT_DIR}")
-    print(f"Model exists: {MODEL_PATH.exists()}")
-    print(f"Image exists: {IMAGE_PATH is not None}")

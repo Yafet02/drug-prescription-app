@@ -1,30 +1,21 @@
 import streamlit as st
-import sqlite3
+from utils import apply_dark_mode
+from database import get_conn
 from passlib.hash import bcrypt
+import sqlite3
 
-# Function to create the users table if it doesn't exist
-def create_users_table(conn):
-    try:
-        cursor = conn.cursor()
-        cursor.execute('''CREATE TABLE IF NOT EXISTS users (
-                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                          username TEXT NOT NULL UNIQUE,
-                          password TEXT NOT NULL
-                          )''')
-        conn.commit()
-    except sqlite3.Error as e:
-        st.error(f"Error creating users table: {e}")
-
-# Added role assignment during user creation
-
-def add_user_page(conn):
+# ---------- Add User Page ----------
+def add_user_page() -> None:
+    """Page for adding new users – only accessible by Admin."""
     st.header("Add New User")
+    apply_dark_mode()
 
-    # Create users table if it doesn't exist
-    create_users_table(conn)
+    # Permission check
+    if st.session_state.get("role") != "Admin":
+        st.error("Only Admin users can add new users.")
+        return
 
-    # Form to input new user details
-    with st.form(key="add_user_form"):
+    with st.form("add_user_form"):
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
         confirm_password = st.text_input("Confirm Password", type="password")
@@ -32,21 +23,30 @@ def add_user_page(conn):
 
         if st.form_submit_button("Add User"):
             if password != confirm_password:
-                st.error("Passwords do not match. Please try again.")
-            elif len(username) == 0 or len(password) == 0:
+                st.error("Passwords do not match.")
+            elif not username or not password:
                 st.error("Username and password cannot be empty.")
             else:
-                add_user(conn, username, password, role)
+                add_user(username, password, role)
 
-def add_user(conn, username, password, role):
+def add_user(username: str, password: str, role: str) -> None:
+    """Insert a new user into the database."""
+    conn = get_conn()  # users database
+    cursor = conn.cursor()
+    hashed_pw = bcrypt.hash(password)
     try:
-        cursor = conn.cursor()
-        hashed_password = bcrypt.hash(password)
-        cursor.execute("INSERT INTO users (username, password, role_id) VALUES (?, ?, (SELECT id FROM roles WHERE role_name=?))", (username, hashed_password, role))
+        cursor.execute(
+            """
+            INSERT INTO users (username, password, role_id)
+            VALUES (?, ?, (SELECT id FROM roles WHERE role_name=?))
+            """,
+            (username, hashed_pw, role),
+        )
         conn.commit()
         st.success(f"User {username} added successfully!")
     except sqlite3.IntegrityError:
         st.error(f"Username {username} is already taken. Please choose a different one.")
     except sqlite3.Error as e:
         st.error(f"Error adding user: {e}")
-
+    finally:
+        conn.close()
